@@ -1,0 +1,10 @@
+{
+  "dependencies": {
+    "axios": "^0.24.0"
+  },
+  "pkg": {
+    "targets": [
+      "node16-win-x64"
+    ]
+  }
+}
