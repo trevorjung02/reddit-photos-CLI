@@ -23,6 +23,7 @@ int main(int argc, char** argv) {
 	int numImages = 100;
 	int tileSize = 25;
 	float scale = 1;
+	std::string outName = "";
 	for (int i = 1; i < argc - 1; i++) {
 		std::string arg = argv[i];
 		if (isOption(arg, "--sub")) {
@@ -37,6 +38,9 @@ int main(int argc, char** argv) {
 		else if (isOption(arg, "--scale")) {
 			scale = std::stof(arg.substr(std::string("--scale").length() + 1));
 		}
+		else if (isOption(arg, "--o")) {
+			outName = arg.substr(std::string("--o").length() + 1);
+		}
 		else {
 			usage(argv);
 			return 1;
@@ -50,7 +54,10 @@ int main(int argc, char** argv) {
 	cv::Mat photomosaic = createPhotomosaic(image, scale, tileSize, "tiles", model);
 
 	fs::create_directory("photomosaics");
-	cv::imwrite((fs::path("photomosaics") / fs::path(image).filename()).string(), photomosaic);
+	if (outName == "") {
+		outName = fs::path(image).filename().string();
+	}
+	cv::imwrite((fs::path("photomosaics") / outName).string(), photomosaic);
 	cv::namedWindow("Photomosaic", cv::WINDOW_NORMAL);
 	cv::imshow("Photomosaic", photomosaic);
 	cv::waitKey();
@@ -101,10 +108,10 @@ cv::Ptr<cv::ml::KNearest> processImages(fs::path dir_in, fs::path dir_out, int w
 	cv::Mat classes(0, 1, CV_32F);
 	for (auto const& dir_entry : fs::directory_iterator{ dir_in }) {
 		fs::path fPath = dir_entry.path();
-		fs::path outPath = dir_out / fPath.filename();
-		resize(fPath.string(), outPath.string(), width, height);
+		fs::path outName = dir_out / fPath.filename();
+		resize(fPath.string(), outName.string(), width, height);
 
-		cv::Mat image = cv::imread(outPath.string());
+		cv::Mat image = cv::imread(outName.string());
 		cv::Mat mean32F = mean(image);
 		trainMat.push_back(mean32F);
 		classes.push_back(std::stoi(fPath.stem()));
@@ -158,12 +165,13 @@ cv::Mat createPhotomosaic(std::string in, float scale, int tileSize, fs::path ti
 }
 
 void usage(char** argv) {
-	std::cerr << "Usage: " << argv[0] << " image_url" << '\n'
+	std::cerr << "Usage: " << argv[0] << " image_path" << '\n'
 		<< "Options:" << '\n'
 		<< "--sub=<subreddit>" << '\n'
 		<< "--n=<number of images>" << '\n'
 		<< "--tile_size=<size of tiles>" << '\n'
-		<< "--scale=<scale of image>" << '\n';
+		<< "--scale=<scale of image>" << '\n'
+		<< "--o=<name of output image>" << std::endl;
 }
 
 bool isOption(std::string arg, std::string option) {
