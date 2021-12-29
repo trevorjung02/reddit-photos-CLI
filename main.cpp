@@ -5,40 +5,59 @@
 
 namespace fs = std::filesystem;
 
-void scrape(std::string path, std::string url, int numPages);
+void scrape(std::string path, std::string url, int numImages);
 void resize(std::string in, std::string out, int width, int height);
 cv::Ptr<cv::ml::KNearest> processImages(fs::path dir_in, fs::path dir_out, int width, int height);
 cv::Mat findNearest(cv::Mat image, cv::Ptr<cv::ml::KNearest> model);
 cv::Mat mean(cv::Mat image);
-cv::Mat flatten(cv::Mat image, int size);
-cv::Mat createPhotomosaic(std::string in, int finalWidth, int finalHeight, int tileSize, fs::path tiles, cv::Ptr<cv::ml::KNearest> model);
+cv::Mat createPhotomosaic(std::string in, float scale, int tileSize, fs::path tiles, cv::Ptr<cv::ml::KNearest> model);
 void usage(char** argv);
+bool isOption(std::string arg, std::string option);
 
 int main(int argc, char** argv) {
-	if (argc != 2 && argc != 4) {
+	if (argc < 2) {
 		usage(argv);
 		return 1;
 	}
-	std::string image = argv[1];
-	if (argc == 4) {
-		std::string url = argv[2];
-		int numPages = std::stoi(argv[3]);
-		scrape("C:/Users/trevo/Code/Scraper/main.exe", url, numPages);
+	std::string url = "EarthPorn";
+	int numImages = 100;
+	int tileSize = 25;
+	float scale = 1;
+	for (int i = 1; i < argc - 1; i++) {
+		std::string arg = argv[i];
+		if (isOption(arg, "--sub")) {
+			url = arg.substr(std::string("--sub").length() + 1);
+		}
+		else if (isOption(arg, "--n")) {
+			numImages = std::stoi(arg.substr(std::string("--n").length() + 1));
+		}
+		else if (isOption(arg, "--tile_size")) {
+			tileSize = std::stoi(arg.substr(std::string("--tile_size").length() + 1));
+		}
+		else if (isOption(arg, "--scale")) {
+			scale = std::stof(arg.substr(std::string("--scale").length() + 1));
+		}
+		else {
+			usage(argv);
+			return 1;
+		}
 	}
-
-	int width = 50;
-	int height = 50;
+	std::string image = argv[argc - 1];
+	scrape("Scraper/scraper.exe", "https://old.reddit.com/r/" + url + "/", numImages);
 	fs::create_directory("tiles");
-	cv::Ptr<cv::ml::KNearest> model = processImages("images", "tiles", width, height);
-	cv::Mat photomosaic = createPhotomosaic(image, 7200, 4800, 50, "tiles", model);
-	cv::imwrite("photomosaic.jpg", photomosaic);
+
+	cv::Ptr<cv::ml::KNearest> model = processImages("images", "tiles", tileSize, tileSize);
+	cv::Mat photomosaic = createPhotomosaic(image, scale, tileSize, "tiles", model);
+
+	fs::create_directory("photomosaics");
+	cv::imwrite((fs::path("photomosaics") / fs::path(image).filename()).string(), photomosaic);
 	cv::namedWindow("Photomosaic", cv::WINDOW_NORMAL);
 	cv::imshow("Photomosaic", photomosaic);
 	cv::waitKey();
 	cv::destroyAllWindows();
 }
 
-void scrape(std::string path, std::string url, int numPages) {
+void scrape(std::string path, std::string url, int numImages) {
 	STARTUPINFO si;
 	PROCESS_INFORMATION pi;
 
@@ -46,7 +65,7 @@ void scrape(std::string path, std::string url, int numPages) {
 	ZeroMemory(&si, sizeof(si));
 	si.cb = sizeof(si);
 	ZeroMemory(&pi, sizeof(pi));
-	std::string cmdArgs = path + " " + url + " " + std::to_string(numPages);
+	std::string cmdArgs = path + " " + url + " " + std::to_string(numImages);
 
 	// start the program up
 	CreateProcess(
@@ -86,13 +105,8 @@ cv::Ptr<cv::ml::KNearest> processImages(fs::path dir_in, fs::path dir_out, int w
 		resize(fPath.string(), outPath.string(), width, height);
 
 		cv::Mat image = cv::imread(outPath.string());
-
-		//cv::Mat flattened = flatten(image, width * height * 3);
-		//trainMat.push_back(flattened);
-
 		cv::Mat mean32F = mean(image);
 		trainMat.push_back(mean32F);
-
 		classes.push_back(std::stoi(fPath.stem()));
 	}
 	cv::Ptr<cv::ml::TrainData> train = cv::ml::TrainData::create(trainMat, cv::ml::SampleTypes::ROW_SAMPLE, classes);
@@ -104,15 +118,8 @@ cv::Ptr<cv::ml::KNearest> processImages(fs::path dir_in, fs::path dir_out, int w
 
 cv::Mat findNearest(cv::Mat image, cv::Ptr<cv::ml::KNearest> model) {
 	cv::Mat res(1, 1, CV_32F);
-
 	cv::Mat mean32F = mean(image);
 	model->findNearest(mean32F, 1, res);
-
-	//cv::Mat resized;
-	//cv::resize(image, resized, cv::Size(50, 50), cv::INTER_LINEAR);
-	//cv::Mat flattened = flatten(resized, 7500);
-	//model->findNearest(flattened, 1, res);
-
 	return res;
 }
 
@@ -123,17 +130,10 @@ cv::Mat mean(cv::Mat image) {
 	return mean32F;
 }
 
-cv::Mat flatten(cv::Mat image, int size) {
-	cv::Mat flattened = image.reshape(1, 1);
-	cv::Mat flattened32f(size, 1, CV_32F);
-	flattened.convertTo(flattened32f, CV_32F);
-	return flattened32f;
-}
-
-cv::Mat createPhotomosaic(std::string in, int finalWidth, int finalHeight, int tileSize, fs::path tiles, cv::Ptr<cv::ml::KNearest> model) {
+cv::Mat createPhotomosaic(std::string in, float scale, int tileSize, fs::path tiles, cv::Ptr<cv::ml::KNearest> model) {
 	cv::Mat image = cv::imread(in);
 	cv::Mat resized;
-	cv::resize(image, resized, cv::Size(finalWidth, finalHeight), cv::INTER_LINEAR);
+	cv::resize(image, resized, cv::Size(), scale, scale, cv::INTER_LINEAR);
 	image = resized;
 
 	int i = 0;
@@ -158,5 +158,15 @@ cv::Mat createPhotomosaic(std::string in, int finalWidth, int finalHeight, int t
 }
 
 void usage(char** argv) {
-	std::cerr << "Usage: " << argv[0] << " source_image [subreddit_url pages]" << std::endl;
+	std::cerr << "Usage: " << argv[0] << " image_url" << '\n'
+		<< "Options:" << '\n'
+		<< "--sub=<subreddit>" << '\n'
+		<< "--n=<number of images>" << '\n'
+		<< "--tile_size=<size of tiles>" << '\n'
+		<< "--scale=<scale of image>" << '\n';
+}
+
+bool isOption(std::string arg, std::string option) {
+	std::size_t found = arg.find(option);
+	return found != std::string::npos;
 }
