@@ -1,6 +1,7 @@
 const axios = require('axios');
 const fs = require('fs');
 const { pipeline } = require('stream/promises');
+const path = require('path');
 
 main();
 
@@ -13,12 +14,9 @@ async function main() {
     const url = process.argv[2];
     const num_images = process.argv[3];
 
-    if (!fs.existsSync("images")) {
-        fs.mkdirSync("images");
-    }
     await scrape(url, num_images, re_img, re_next)
         .then(async (img_urls) => {
-            await download_images(img_urls);
+            await download_images(img_urls, path.join(process.cwd(), "images"));
         });
 }
 
@@ -70,7 +68,6 @@ function scrape_next_page(url, re_next) {
         .then(function (response) {
             let matches = response.data.match(re_next);
             if (matches == null) {
-                ``
                 return null;
             }
             return matches[1];
@@ -80,10 +77,10 @@ function scrape_next_page(url, re_next) {
         });
 }
 
-function download_images(img_urls) {
+function download_images(img_urls, outPath) {
     let promises = [];
     for (let i = 0; i < img_urls.length; i++) {
-        promises.push(downloadFile("https://" + img_urls[i], `images/${i}.jpg`));
+        promises.push(downloadFile("https://" + img_urls[i], path.join(outPath, `${i}.jpg`)));
     }
     return Promise.all(promises);
 }

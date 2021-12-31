@@ -47,17 +47,23 @@ int main(int argc, char** argv) {
 		}
 	}
 	std::string image = argv[argc - 1];
-	scrape("Scraper/scraper.exe", "https://old.reddit.com/r/" + url + "/", numImages);
-	fs::create_directory("tiles");
+	std::string pathBuf;
+	pathBuf.resize(MAX_PATH);
+	GetModuleFileName(NULL, &pathBuf.at(0), MAX_PATH);
+	fs::path root(fs::path(pathBuf).remove_filename());
+	fs::path scraperPath(root / fs::path("Scraper") / fs::path("scraper.exe"));
+	fs::create_directory(root / "images");
+	scrape(scraperPath.string(), "https://old.reddit.com/r/" + url + "/", numImages);
 
-	cv::Ptr<cv::ml::KNearest> model = processImages("images", "tiles", tileSize, tileSize);
-	cv::Mat photomosaic = createPhotomosaic(image, scale, tileSize, "tiles", model);
+	fs::create_directory(root / "tiles");
+	cv::Ptr<cv::ml::KNearest> model = processImages(root / "images", root / "tiles", tileSize, tileSize);
 
-	fs::create_directory("photomosaics");
+	cv::Mat photomosaic = createPhotomosaic(image, scale, tileSize, root / "tiles", model);
+	fs::create_directory(root / "photomosaics");
 	if (outName == "") {
 		outName = fs::path(image).filename().string();
 	}
-	cv::imwrite((fs::path("photomosaics") / outName).string(), photomosaic);
+	cv::imwrite((fs::path(root / "photomosaics") / outName).string(), photomosaic);
 	cv::namedWindow("Photomosaic", cv::WINDOW_NORMAL);
 	cv::imshow("Photomosaic", photomosaic);
 	cv::waitKey();
