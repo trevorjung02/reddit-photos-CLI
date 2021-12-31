@@ -5,16 +5,32 @@
 
 namespace fs = std::filesystem;
 
-void scrape(std::string path, std::string url, int numImages);
+// Scrape numImages from url, downloading them into outDir. The path parameter is the location of scraper.exe.
+void scrape(std::string path, std::string url, int numImages, std::string outDir);
+
+// Resize an image located at in to width and height, downloading the result into out.
 void resize(std::string in, std::string out, int width, int height);
+
+// Resizes images from dir_in to width and height and downloads results into dir_out. Creates and returns one nearest neighbor model that compares images on their average rgbs to the resized images. 
 cv::Ptr<cv::ml::KNearest> processImages(fs::path dir_in, fs::path dir_out, int width, int height);
+
+// Given image, finds closest image from model.
 cv::Mat findNearest(cv::Mat image, cv::Ptr<cv::ml::KNearest> model);
+
+// Returns a 4 component row vector of type CV_32F representing the mean of image.
 cv::Mat mean(cv::Mat image);
+
+// Creates and returns a photomosaic of in, with a scaling factor of scale, and tileSizes of tileSize. The tiles parameter is the location of the tiles, and model is the one nearest neighbor model used. 
 cv::Mat createPhotomosaic(std::string in, float scale, int tileSize, fs::path tiles, cv::Ptr<cv::ml::KNearest> model);
+
+// Prints usage of the program on the console.
 void usage(char** argv);
+
+// Checks if command line argument is the flag represented by option.
 bool isOption(std::string arg, std::string option);
 
 int main(int argc, char** argv) {
+	// Set command line arguments
 	if (argc < 2) {
 		usage(argv);
 		return 1;
@@ -47,30 +63,42 @@ int main(int argc, char** argv) {
 		}
 	}
 	std::string image = argv[argc - 1];
+
+	// Set paths
 	std::string pathBuf;
 	pathBuf.resize(MAX_PATH);
 	GetModuleFileName(NULL, &pathBuf.at(0), MAX_PATH);
 	fs::path root(fs::path(pathBuf).remove_filename());
 	fs::path scraperPath(root / fs::path("Scraper") / fs::path("scraper.exe"));
-	fs::create_directory(root / "images");
-	scrape(scraperPath.string(), "https://old.reddit.com/r/" + url + "/", numImages);
+	fs::path outPath(root / "images");
+	fs::path tilesPath(root / "tiles");
+	fs::path photomosaicsPath(root / "photomosaics");
 
-	fs::create_directory(root / "tiles");
-	cv::Ptr<cv::ml::KNearest> model = processImages(root / "images", root / "tiles", tileSize, tileSize);
+	// Create directories
+	fs::create_directory(outPath);
+	fs::create_directory(tilesPath);
+	fs::create_directory(photomosaicsPath);
 
-	cv::Mat photomosaic = createPhotomosaic(image, scale, tileSize, root / "tiles", model);
-	fs::create_directory(root / "photomosaics");
+	// Scrape images
+	scrape(scraperPath.string(), "https://old.reddit.com/r/" + url + "/", numImages, outPath.string());
+
+	// Create model
+	cv::Ptr<cv::ml::KNearest> model = processImages(outPath, tilesPath, tileSize, tileSize);
+
+	// Create photomosaic
+	cv::Mat photomosaic = createPhotomosaic(image, scale, tileSize, tilesPath, model);
+
 	if (outName == "") {
 		outName = fs::path(image).filename().string();
 	}
-	cv::imwrite((fs::path(root / "photomosaics") / outName).string(), photomosaic);
+	cv::imwrite((photomosaicsPath / outName).string(), photomosaic);
 	cv::namedWindow("Photomosaic", cv::WINDOW_NORMAL);
 	cv::imshow("Photomosaic", photomosaic);
 	cv::waitKey();
 	cv::destroyAllWindows();
 }
 
-void scrape(std::string path, std::string url, int numImages) {
+void scrape(std::string path, std::string url, int numImages, std::string outDir) {
 	STARTUPINFO si;
 	PROCESS_INFORMATION pi;
 
@@ -78,7 +106,7 @@ void scrape(std::string path, std::string url, int numImages) {
 	ZeroMemory(&si, sizeof(si));
 	si.cb = sizeof(si);
 	ZeroMemory(&pi, sizeof(pi));
-	std::string cmdArgs = path + " " + url + " " + std::to_string(numImages);
+	std::string cmdArgs = path + " " + url + " " + std::to_string(numImages) + " " + outDir;
 
 	// start the program up
 	CreateProcess(

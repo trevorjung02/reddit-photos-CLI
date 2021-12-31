@@ -6,17 +6,18 @@ const path = require('path');
 main();
 
 async function main() {
-    if (process.argv.length < 4) {
+    if (process.argv.length < 5) {
         process.exit(1);
     }
     const re_img = /[ab]\.thumbs\.redditmedia\.com\S*\.jpg/g;
     const re_next = /(\?\S*)" rel="nofollow next"/;
     const url = process.argv[2];
     const num_images = process.argv[3];
+    const outDir = process.argv[4];
 
     await scrape(url, num_images, re_img, re_next)
         .then(async (img_urls) => {
-            await download_images(img_urls, path.join(process.cwd(), "images"));
+            await download_images(img_urls, outDir);
         });
 }
 
@@ -77,10 +78,10 @@ function scrape_next_page(url, re_next) {
         });
 }
 
-function download_images(img_urls, outPath) {
+function download_images(img_urls, outDir) {
     let promises = [];
     for (let i = 0; i < img_urls.length; i++) {
-        promises.push(downloadFile("https://" + img_urls[i], path.join(outPath, `${i}.jpg`)));
+        promises.push(downloadFile("https://" + img_urls[i], path.join(outDir, `${i}.jpg`)));
     }
     return Promise.all(promises);
 }
