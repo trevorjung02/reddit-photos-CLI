@@ -10,7 +10,7 @@ This program creates photomosaics out of images scraped from Reddit. An example 
 Download and unzip the latest release. No need to install.
 ### How To Run
 Run the file redditphotos.exe in the command line. The required argument is a path to the input image. Example shown below scrapes from r/pics: \
-`redditphotos.exe" --sub=pics C:\path\to\image.jpg `
+`redditphotos.exe --sub=pics C:\path\to\image.jpg `
 
 Additional options:
 | Flag | Use |
