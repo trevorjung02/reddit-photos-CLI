@@ -9,12 +9,13 @@ This program creates photomosaics out of images scraped from Reddit. An example 
 ## Instructions for Windows users:
 Download and unzip the latest release. No need to install.
 ### How To Run
-Run the file redditphotos.exe in the command line. The required inputs are a subreddit name to scrape images from, and a path to the input image. Example shown below scrapes from r/pics: \
+Run the file redditphotos.exe in the command line. The required argument is a path to the input image. Example shown below scrapes from r/pics: \
 `redditphotos.exe" --sub=pics C:\path\to\image.jpg `
 
 Additional options:
 | Flag | Use |
 | ---- | --- |
+| --sub | Subreddit to scrape images from. Default is EarthPorn (This is SFW, just inconveniently named. It is the largest nature pic subreddit.) |
 | --n  | Number of images to scrape. Default is 100. |
 | --tile_size | Side length of each "tile" image. Default is 25. |
 | --scale | Scale factor to apply to image, Default is 1. Note: the photomosaics will be very blocky if the scale factor is too small. |
