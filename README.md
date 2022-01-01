@@ -1,8 +1,8 @@
 # reddit-photos-CLI
 This program creates photomosaics out of images scraped from Reddit. An example photomosaic side by side with the original is shown below:
 <p float="left">
-<img src="https://res.cloudinary.com/emrys/image/upload/v1641013582/photomosaicsGit/puyhv4pxsw881_rpqtut.jpg" alt="photomosaic" width="500"/>
-<img src="https://res.cloudinary.com/emrys/image/upload/v1641013637/photomosaicsGit/puyhv4pxsw881_1_cseynz.jpg" alt="original" width="500"/>
+<img src="https://res.cloudinary.com/emrys/image/upload/v1641013582/photomosaicsGit/puyhv4pxsw881_rpqtut.jpg" alt="photomosaic" width="400"/>
+<img src="https://res.cloudinary.com/emrys/image/upload/v1641013637/photomosaicsGit/puyhv4pxsw881_1_cseynz.jpg" alt="original" width="400"/>
 </p>
 
   
